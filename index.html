@@ -5,11 +5,6 @@
 
         <link rel="stylesheet" href="./style.css" />
         <title>PA#1</title>
-
-        <script src="./Utils/trackball-rotator.js"></script>
-        <script src="./Utils/m4.js"></script>
-        <script src="./shader.gpu"></script>
-        <script src="./main.js"></script>
     </head>
     <body onload="init()">
         <div class="wrapper">
@@ -32,19 +27,19 @@
                         <h3>Parameters</h3>
                         <div class="parameter-group">
                             <label for="a">a:</label>
-                            <input type="number" id="a" name="a" />
+                            <input type="number" id="a" name="a" value="3" />
                         </div>
                         <div class="parameter-group">
                             <label for="b">b:</label>
-                            <input type="number" id="b" name="b" />
+                            <input type="number" id="b" name="b" value="1" />
                         </div>
                         <div class="parameter-group">
                             <label for="zStep">z step:</label>
-                            <input type="number" id="zStep" name="zStep" />
+                            <input type="number" id="zStep" name="zStep" value="0.1" />
                         </div>
                         <div class="parameter-group">
                             <label for="angleStep">angle step (degree):</label>
-                            <input type="number" id="angleStep" name="angleStep" />
+                            <input type="number" id="angleStep" name="angleStep" value="5" />
                         </div>
                     </div>
                     <div class="button">
@@ -53,5 +48,10 @@
                 </div>
             </div>
         </div>
+
+        <script src="./Utils/trackball-rotator.js"></script>
+        <script src="./Utils/m4.js"></script>
+        <script src="./shader.gpu"></script>
+        <script src="./main.js"></script>
     </body>
 </html>
