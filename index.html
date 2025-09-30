@@ -1,31 +1,57 @@
 <!DOCTYPE html>
-<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 
+        <link rel="stylesheet" href="./style.css" />
+        <title>PA#1</title>
 
-<title>PA#1</title>
-<style>
-    body {
-        background-color: #EEEEEE;
-    }
-</style>
+        <script src="./Utils/trackball-rotator.js"></script>
+        <script src="./Utils/m4.js"></script>
+        <script src="./shader.gpu"></script>
+        <script src="./main.js"></script>
+    </head>
+    <body onload="init()">
+        <div class="wrapper">
+            <div class="text__container">
+                <h2>A Surface of Revolution "Pear" Mouse Rotation</h2>
 
-<script src="./Utils/trackball-rotator.js"></script>
-<script src="./Utils/m4.js"></script>
-<script src="./shader.gpu"></script>
-<script src="./main.js"></script>
+                <p id="message">
+                    Drag your mouse on the cube to rotate it.<br />
+                    (On a touch screen, you can use your finger.)
+                </p>
+            </div>
 
-</head>
-<body onload="init()">
+            <div class="main-content">
+                <div id="canvas-holder">
+                    <canvas width="700" height="700" id="webglcanvas" style="background-color: red"></canvas>
+                </div>
 
-<h2>A Cube with "Trackball" Mouse Rotation</h2>
-
-<p id="message">Drag your mouse on the cube to rotate it.<br>
-(On a touch screen, you can use your finger.)</p>
-
-
-<div id="canvas-holder">
-   <canvas width="600" height="600" id="webglcanvas" style="background-color:red"></canvas>
-</div>
-
-
-</body></html>
+                <div class="controls">
+                    <div class="parameters__container">
+                        <h3>Parameters</h3>
+                        <div class="parameter-group">
+                            <label for="a">a:</label>
+                            <input type="number" id="a" name="a" />
+                        </div>
+                        <div class="parameter-group">
+                            <label for="b">b:</label>
+                            <input type="number" id="b" name="b" />
+                        </div>
+                        <div class="parameter-group">
+                            <label for="zStep">z step:</label>
+                            <input type="number" id="zStep" name="zStep" />
+                        </div>
+                        <div class="parameter-group">
+                            <label for="angleStep">angle step (degree):</label>
+                            <input type="number" id="angleStep" name="angleStep" />
+                        </div>
+                    </div>
+                    <div class="button">
+                        <button onclick="reset()">Reset</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>
