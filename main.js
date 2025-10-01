@@ -140,7 +140,7 @@ function CreateSurfaceData() {
     let zStepValue = parseFloat(zStep.value);
 
     // Create horizontal lines
-    for (let z = 0; z <= a.value; z = zStepValue) {
+    for (let z = 0; z <= a.value; z = +(z+zStepValue).toFixed(2)) {
         for (let angle = 0; angle <= 2 * Math.PI; angle += angleStepRad) {
             let rZ = RZ(z);
             let x = X(rZ, angle);
@@ -152,7 +152,7 @@ function CreateSurfaceData() {
 
     // Create vertical lines
     for (let angle = 0; angle <= 2 * Math.PI; angle += angleStepRad) {
-        for (let z = 0; z <= a.value; z += zStepValue) {
+        for (let z = 0; z <= a.value; z = +(z+zStepValue).toFixed(2)) {
             let rZ = RZ(z);
             let x = X(rZ, angle);
             let y = Y(rZ, angle);
