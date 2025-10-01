@@ -11,7 +11,8 @@ const b = document.getElementById('b');
 const zStep = document.getElementById('zStep');
 const angleStep = document.getElementById('angleStep');
 
-const maxAngle = 2 * Math.PI;
+
+let countHorizontalLines, countVerticalLines;
 
 // Add event listeners to the input elements to redraw the surface when parameters change
 [a, b, zStep, angleStep].forEach((el) =>
@@ -38,22 +39,43 @@ function deg2rad(angle) {
 // Constructor
 function Model(name) {
     this.name = name;
-    this.iVertexBuffer = gl.createBuffer();
-    this.count = 0;
+    this.horizontalBuffer = gl.createBuffer();
+    this.verticalBuffer = gl.createBuffer();
+    this.horizontalVertices = [];
+    this.verticalVertices = [];
 
-    this.BufferData = function (vertices) {
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STREAM_DRAW);
+    this.BufferData = function (surfaceData) {
+        // Store horizontal lines data
+        this.horizontalVertices = surfaceData.horizontal;
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.horizontalBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.horizontalVertices), gl.STREAM_DRAW);
 
-        this.count = vertices.length / 3;
+        // Store vertical lines data
+        this.verticalVertices = surfaceData.vertical;
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.verticalBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.verticalVertices), gl.STREAM_DRAW);
     };
 
     this.Draw = function () {
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
+        // Draw horizontal lines
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.horizontalBuffer);
         gl.vertexAttribPointer(shProgram.iAttribVertex, 3, gl.FLOAT, false, 0, 0);
         gl.enableVertexAttribArray(shProgram.iAttribVertex);
+        
+        for (let i = 0; i < countHorizontalLines; i++) {
+            let start = countVerticalLines * i;
+            gl.drawArrays(gl.LINE_STRIP, start, countVerticalLines);
+        }
 
-        gl.drawArrays(gl.LINE_STRIP, 0, this.count);
+        // Draw vertical lines
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.verticalBuffer);
+        gl.vertexAttribPointer(shProgram.iAttribVertex, 3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(shProgram.iAttribVertex);
+        
+        for (let i = 0; i < countVerticalLines; i++) {
+            let start = countHorizontalLines * i;
+            gl.drawArrays(gl.LINE_STRIP, start, countHorizontalLines);
+        }
     };
 }
 
@@ -83,7 +105,8 @@ function draw() {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     /* Set the values of the projection transformation */
-    let projection = m4.perspective(Math.PI / 8, 1, 8, 12);
+    // let projection = m4.perspective(Math.PI / 8, 1, 8, 12);
+    let projection = m4.perspective(Math.PI / 3, 1, 1, 20);
 
     /* Get the view matrix from the SimpleRotator object.*/
     let modelView = spaceball.getViewMatrix();
@@ -107,14 +130,41 @@ function draw() {
 }
 
 function CreateSurfaceData() {
-    let vertexList = [];
+    let horizontalVertices = [];
+    let verticalVertices = [];
 
-    for (let i = 0; i < 360; i += 5) {
-        vertexList.push(Math.sin(deg2rad(i)), 1, Math.cos(deg2rad(i)));
-        vertexList.push(Math.sin(deg2rad(i)), 0, Math.cos(deg2rad(i)));
+    countHorizontalLines = 0;
+    countVerticalLines = 0;
+
+    let angleStepRad = deg2rad(angleStep.value);
+    let zStepValue = parseFloat(zStep.value);
+
+    // Create horizontal lines
+    for (let z = 0; z <= a.value; z = zStepValue) {
+        for (let angle = 0; angle <= 2 * Math.PI; angle += angleStepRad) {
+            let rZ = RZ(z);
+            let x = X(rZ, angle);
+            let y = Y(rZ, angle);
+            horizontalVertices.push(x, y, z);
+        }
+        countHorizontalLines++;
     }
 
-    return vertexList;
+    // Create vertical lines
+    for (let angle = 0; angle <= 2 * Math.PI; angle += angleStepRad) {
+        for (let z = 0; z <= a.value; z += zStepValue) {
+            let rZ = RZ(z);
+            let x = X(rZ, angle);
+            let y = Y(rZ, angle);
+            verticalVertices.push(x, y, z);
+        }
+        countVerticalLines++;
+    }
+
+    return {
+        horizontal: horizontalVertices,
+        vertical: verticalVertices
+    };
 }
 
 /* Initialize the WebGL context. Called from init() */
