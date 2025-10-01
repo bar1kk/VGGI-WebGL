@@ -11,7 +11,6 @@ const b = document.getElementById('b');
 const zStep = document.getElementById('zStep');
 const angleStep = document.getElementById('angleStep');
 
-
 let countHorizontalLines, countVerticalLines;
 
 // Add event listeners to the input elements to redraw the surface when parameters change
@@ -30,6 +29,15 @@ const RZ = (z) => (z * Math.sqrt(z * (a.value - z))) / b.value;
 function redraw() {
     surface.BufferData(CreateSurfaceData());
     draw();
+}
+
+//Function to reset parameters to default values
+function resetParameters() {
+    a.value = 3;
+    b.value = 1;
+    zStep.value = 0.1;
+    angleStep.value = 15;
+    redraw();
 }
 
 function deg2rad(angle) {
@@ -61,7 +69,7 @@ function Model(name) {
         gl.bindBuffer(gl.ARRAY_BUFFER, this.horizontalBuffer);
         gl.vertexAttribPointer(shProgram.iAttribVertex, 3, gl.FLOAT, false, 0, 0);
         gl.enableVertexAttribArray(shProgram.iAttribVertex);
-        
+
         for (let i = 0; i < countHorizontalLines; i++) {
             let start = countVerticalLines * i;
             gl.drawArrays(gl.LINE_STRIP, start, countVerticalLines);
@@ -71,7 +79,7 @@ function Model(name) {
         gl.bindBuffer(gl.ARRAY_BUFFER, this.verticalBuffer);
         gl.vertexAttribPointer(shProgram.iAttribVertex, 3, gl.FLOAT, false, 0, 0);
         gl.enableVertexAttribArray(shProgram.iAttribVertex);
-        
+
         for (let i = 0; i < countVerticalLines; i++) {
             let start = countHorizontalLines * i;
             gl.drawArrays(gl.LINE_STRIP, start, countHorizontalLines);
@@ -140,7 +148,7 @@ function CreateSurfaceData() {
     let zStepValue = parseFloat(zStep.value);
 
     // Create horizontal lines
-    for (let z = 0; z <= a.value; z = +(z+zStepValue).toFixed(2)) {
+    for (let z = 0; z <= a.value; z = +(z + zStepValue).toFixed(2)) {
         for (let angle = 0; angle <= 2 * Math.PI; angle += angleStepRad) {
             let rZ = RZ(z);
             let x = X(rZ, angle);
@@ -152,7 +160,7 @@ function CreateSurfaceData() {
 
     // Create vertical lines
     for (let angle = 0; angle <= 2 * Math.PI; angle += angleStepRad) {
-        for (let z = 0; z <= a.value; z = +(z+zStepValue).toFixed(2)) {
+        for (let z = 0; z <= a.value; z = +(z + zStepValue).toFixed(2)) {
             let rZ = RZ(z);
             let x = X(rZ, angle);
             let y = Y(rZ, angle);

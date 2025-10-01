@@ -27,23 +27,30 @@
                         <h3>Parameters</h3>
                         <div class="parameter-group">
                             <label for="a">a:</label>
-                            <input type="number" id="a" name="a" value="3" />
+                            <input type="number" id="a" name="a" value="3" step="0.1" min="0.1" />
                         </div>
                         <div class="parameter-group">
                             <label for="b">b:</label>
-                            <input type="number" id="b" name="b" value="1" />
+                            <input type="number" id="b" name="b" value="1" step="0.1" min="0.1" />
                         </div>
                         <div class="parameter-group">
                             <label for="zStep">z step:</label>
-                            <input type="number" id="zStep" name="zStep" value="0.1" />
+                            <input type="number" id="zStep" name="zStep" value="0.1" step="0.1" min="0.1" />
                         </div>
                         <div class="parameter-group">
                             <label for="angleStep">angle step (degree):</label>
-                            <input type="number" id="angleStep" name="angleStep" value="5" />
+                            <input
+                                type="number"
+                                id="angleStep"
+                                name="angleStep"
+                                value="15"
+                                step="1"
+                                min="1"
+                                max="360" />
                         </div>
                     </div>
                     <div class="button">
-                        <button onclick="reset()">Reset</button>
+                        <button onclick="resetParameters()">Reset</button>
                     </div>
                 </div>
             </div>
