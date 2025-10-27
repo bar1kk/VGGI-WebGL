@@ -1,16 +1,12 @@
-
-
-function deg2rad(angle) {
-    return angle * Math.PI / 180;
-}
+'use strict';
 
 // p: an array of xyz vertex coords
 // t: an array of uv tex coords
 function Vertex(p)
 {
     this.p = p;
-    this.normal = [];
-    this.triangles = [];
+    this.normal = [0, 0, 0];
+    // this.triangles = [];
 }
 
 function Triangle(v0, v1, v2)
@@ -18,21 +14,26 @@ function Triangle(v0, v1, v2)
     this.v0 = v0;
     this.v1 = v1;
     this.v2 = v2;
-    this.normal = [];
-    this.tangent = [];
+    // this.normal = [];
+    // this.tangent = [];
 }
 
 // Model Constructor function
 function Model(name) {
     this.name = name;
     this.iVertexBuffer = gl.createBuffer();
+    this.iNormalBuffer = gl.createBuffer();
     this.iIndexBuffer = gl.createBuffer();
     this.count = 0;
 
-    this.BufferData = function(vertices, indices) {
+    // Buffer the data into the GPU
+    this.BufferData = function(vertices, normals, indices) {
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.iNormalBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, normals, gl.STATIC_DRAW);
 
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.iIndexBuffer);
         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
@@ -40,11 +41,16 @@ function Model(name) {
         this.count = indices.length;
     }
 
+    // Draw the model
     this.Draw = function() {
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
         gl.vertexAttribPointer(shProgram.iAttribVertex, 3, gl.FLOAT, false, 0, 0);
         gl.enableVertexAttribArray(shProgram.iAttribVertex);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.iNormalBuffer);
+        gl.vertexAttribPointer(shProgram.iAttribNormal, 3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(shProgram.iAttribNormal);
 
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.iIndexBuffer);
 
@@ -56,66 +62,95 @@ function Model(name) {
 
 function CreateSurfaceData(data)
 {
+    // Parametric equations
+    const X = (rZ, angle) => rZ * Math.sin(angle);
+    const Y = (rZ, angle) => rZ * Math.cos(angle);
+    const RZ = (z, a, b) => (z * Math.sqrt(z * (a - z))) / b;
+
+    // Parameters from the UI
+    let a = parseFloat(document.getElementById('a').value);
+    let b = parseFloat(document.getElementById('b').value);
+    let uDivs = parseInt(document.getElementById('uSlider').value);
+    let vDivs = parseInt(document.getElementById('vSlider').value);
+
+    let uStep = a / uDivs;
+    let vStep = (2 * Math.PI) / vDivs;
+
     let vertices = [];
     let triangles = [];
 
-    for (let i=0, ang = 0; i<72; i++, ang+=5) {
-        // TODO: replace with your equation
-        vertices.push( new Vertex( [Math.sin(deg2rad(ang)), 0, Math.cos(deg2rad(ang))] ));
-    }
-
-    for (let i=0, ang = 0; i<72; i++, ang+=5) {
-
-        // TODO: replace with your equation
-        let v0ind = vertices.length;
-        vertices.push( new Vertex( [Math.sin(deg2rad(ang)), 1, Math.cos(deg2rad(ang))] ));
-
-        // v0    v2 
-        //   o - o
-        //   | \ |
-        //   o - o
-        // v3     v1
-
-        if (i > 0)
-        {
-            let v1ind = v0ind - 72 -1;
-            let v2ind = v0ind - 1;
-            let v3ind = v0ind - 72;
-
-            let trian = new Triangle(v0ind, v1ind, v2ind);
-            let trianInd = triangles.length;
-
-            triangles.push( trian );
-            vertices[v0ind].triangles.push(trianInd);
-            vertices[v1ind].triangles.push(trianInd);
-            vertices[v2ind].triangles.push(trianInd);
-
-            let trian2 = new Triangle(v0ind, v3ind, v1ind);
-            let trianInd2 = triangles.length;
-
-            triangles.push( trian2 );
-            vertices[v0ind].triangles.push(trianInd2);
-            vertices[v3ind].triangles.push(trianInd2);
-            vertices[v1ind].triangles.push(trianInd2);
-
+    // Generate vertices
+    for (let i = 0; i <= uDivs; i++) {
+        let u = i * uStep;
+        let rZ = RZ(u, a, b);
+        for (let j = 0; j <= vDivs; j++) {
+            let v = j * vStep;
+            
+            let x = X(rZ, v);
+            let y = Y(rZ, v);
+            let z = u;
+            vertices.push( new Vertex([x, y, z]) );
         }
-
     }
 
+    // Generate triangles
+    for (let i = 0; i < uDivs; i++) {
+        for (let j = 0; j < vDivs; j++) {
+            let v0 = i * (vDivs + 1) + j;
+            let v1 = v0 + 1;
+            let v2 = (i + 1) * (vDivs + 1) + j;
+            let v3 = v2 + 1;
+
+            triangles.push( new Triangle(v0, v2, v1) );
+            triangles.push( new Triangle(v1, v2, v3) );
+        }
+    }
+
+    // Calculate normals (Faced Area Weighted Average)
+    for (let tri of triangles) {
+        // Vertices of the triangle
+        let v0 = vertices[tri.v0];
+        let v1 = vertices[tri.v1];
+        let v2 = vertices[tri.v2];
+
+        // Get their positions
+        let vecA = m4.subtractVectors(v1.p, v0.p);
+        let vecB = m4.subtractVectors(v2.p, v0.p);
+
+        // Facet normal
+        let facetNormal = m4.cross(vecA, vecB);
+
+        // Add the facet normal to each vertex normal
+        m4.addVectors(v0.normal, facetNormal, v0.normal);
+        m4.addVectors(v1.normal, facetNormal, v1.normal);
+        m4.addVectors(v2.normal, facetNormal, v2.normal);
+    }
+
+    // Prepare data arrays
     data.verticesF32 = new Float32Array(vertices.length*3);
-    for (let i=0, len=vertices.length; i<len; i++)
+    data.normalsF32 = new Float32Array(vertices.length*3);
+
+    // Fill vertex and normal arrays
+    for (let i=0; i<vertices.length; i++)
     {
         data.verticesF32[i*3 + 0] = vertices[i].p[0];
         data.verticesF32[i*3 + 1] = vertices[i].p[1];
         data.verticesF32[i*3 + 2] = vertices[i].p[2];
+
+        // Normalize the normal vector
+        let n = m4.normalize(vertices[i].normal);
+
+        data.normalsF32[i*3 + 0] = n[0];
+        data.normalsF32[i*3 + 1] = n[1];
+        data.normalsF32[i*3 + 2] = n[2];
     }
 
+    // Fill index array
     data.indicesU16 = new Uint16Array(triangles.length*3);
-    for (let i=0, len=triangles.length; i<len; i++)
+    for (let i=0; i<triangles.length; i++)
     {
         data.indicesU16[i*3 + 0] = triangles[i].v0;
         data.indicesU16[i*3 + 1] = triangles[i].v1;
         data.indicesU16[i*3 + 2] = triangles[i].v2;
     }
-
 }
