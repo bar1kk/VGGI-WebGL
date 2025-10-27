@@ -34,6 +34,15 @@ function redraw() {
     draw();
 }
 
+function resetParameters() {
+    a_input.value = 3.0;
+    b_input.value = 1.0;
+    u_slider.value = 30;
+    v_slider.value = 30;
+
+    redraw();
+}
+
 /* Draws a colored cube, along with a set of coordinate axes.
  * (Note that the use of the above drawPrimitive function is not an efficient
  * way to draw with WebGL.  Here, the geometry is so simple that it doesn't matter.)
@@ -43,25 +52,33 @@ function draw() {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     /* Set the values of the projection transformation */
-    let projection = m4.perspective(Math.PI / 8, 1, 8, 12);
+    let projection = m4.perspective(Math.PI / 4, 1, 1, 20);
 
     /* Get the view matrix from the SimpleRotator object.*/
     let modelView = spaceball.getViewMatrix();
 
-    let rotateToPointZero = m4.axisRotation([0.707, 0.707, 0], 0.7);
     let translateToPointZero = m4.translation(0, 0, -10);
+    let matAccum1 = m4.multiply(translateToPointZero, modelView);
 
-    let matAccum0 = m4.multiply(rotateToPointZero, modelView);
-    let matAccum1 = m4.multiply(translateToPointZero, matAccum0);
+    let normalMatrix = m4.inverse(matAccum1);
+    m4.transpose(normalMatrix, normalMatrix);
 
-    /* Multiply the projection matrix times the modelview matrix to give the
-       combined transformation matrix, and send that to the shader program. */
-    let modelViewProjection = m4.multiply(projection, matAccum1);
+    // Light position in eye-space 
+    const lightWorldPos = [5.0, 3.0, 5.0];
+    let lightEyePos = m4.transformPoint(modelView, lightWorldPos);
 
-    gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, modelViewProjection);
+    shProgram.Use();
 
-    /* Draw the six faces of a cube, with different colors. */
-    gl.uniform4fv(shProgram.iColor, [1, 1, 0, 1]);
+    // Set the uniform variables for the shaders
+    gl.uniformMatrix4fv(shProgram.iProjectionMatrix, false, projection);
+    gl.uniformMatrix4fv(shProgram.iModelViewMatrix, false, matAccum1);
+    gl.uniformMatrix4fv(shProgram.iNormalMatrix, false, normalMatrix);
+    gl.uniform3fv(shProgram.iLightPosition, lightEyePos);
+    gl.uniform3f(shProgram.iObjectColor, 0.8, 0.5, 0.2);       
+    gl.uniform3f(shProgram.iAmbientLightColor, 0.2, 0.2, 0.2); 
+    gl.uniform3f(shProgram.iDiffuseLightColor, 0.8, 0.8, 0.8); 
+    gl.uniform3f(shProgram.iSpecularLightColor, 1.0, 1.0, 1.0);
+    gl.uniform1f(shProgram.iShininess, 32.0);   
 
     surface.Draw();
 }
@@ -70,14 +87,26 @@ function draw() {
 function initGL() {
     let prog = createProgram(gl, vertexShaderSource, fragmentShaderSource);
 
-    shProgram = new ShaderProgram('Basic', prog);
+    shProgram = new ShaderProgram('PhongShader', prog);
     shProgram.Use();
 
-    shProgram.iAttribVertex = gl.getAttribLocation(prog, 'vertex');
-    shProgram.iModelViewProjectionMatrix = gl.getUniformLocation(prog, 'ModelViewProjectionMatrix');
-    shProgram.iColor = gl.getUniformLocation(prog, 'color');
+    // Get the location of the attribute and uniform variables
+    shProgram.iAttribVertex = gl.getAttribLocation(prog, 'a_VertexPosition');
+    shProgram.iAttribNormal = gl.getAttribLocation(prog, 'a_VertexNormal');
+    shProgram.iProjectionMatrix = gl.getUniformLocation(prog, 'u_ProjectionMatrix');
+    shProgram.iModelViewMatrix = gl.getUniformLocation(prog, 'u_ModelViewMatrix');
+    shProgram.iNormalMatrix = gl.getUniformLocation(prog, 'u_NormalMatrix');
+    shProgram.iLightPosition = gl.getUniformLocation(prog, 'u_LightPosition');
+    shProgram.iObjectColor = gl.getUniformLocation(prog, 'u_ObjectColor');
+    shProgram.iAmbientLightColor = gl.getUniformLocation(prog, 'u_AmbientLightColor');
+    shProgram.iDiffuseLightColor = gl.getUniformLocation(prog, 'u_DiffuseLightColor');
+    shProgram.iSpecularLightColor = gl.getUniformLocation(prog, 'u_SpecularLightColor');
+    shProgram.iShininess = gl.getUniformLocation(prog, 'u_Shininess');
 
     surface = new Model('Surface');
+
+    gl.enable(gl.DEPTH_TEST);
+    gl.clearColor(0.2, 0.2, 0.2, 1);
 }
 
 /* Creates a program for use in the WebGL context gl, and returns the
