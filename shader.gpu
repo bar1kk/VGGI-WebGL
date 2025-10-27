@@ -1,24 +1,75 @@
-
-
 // Vertex shader
 const vertexShaderSource = `
-attribute vec3 vertex;
-uniform mat4 ModelViewProjectionMatrix;
+    attribute vec3 a_VertexPosition;
+    attribute vec3 a_VertexNormal;
 
-void main() {
-    gl_Position = ModelViewProjectionMatrix * vec4(vertex,1.0);
-}`;
+    uniform mat4 u_ProjectionMatrix;
+    uniform mat4 u_ModelViewMatrix;
+    uniform mat4 u_NormalMatrix;
 
+    // Varyings to pass data to fragment shader
+    varying vec3 v_TransformedNormal;
+    varying vec3 v_VertexWorldPosition; //eye-space position
+
+    void main() {
+        // Calc screen-space position
+        gl_Position = u_ProjectionMatrix * u_ModelViewMatrix * vec4(a_VertexPosition, 1.0);
+
+        // Transform normal and position to eye-space
+        v_TransformedNormal = (u_NormalMatrix * vec4(a_VertexNormal, 0.0)).xyz;
+
+        // Pass eye-space position to fragment shader
+        v_VertexWorldPosition = (u_ModelViewMatrix * vec4(a_VertexPosition, 1.0)).xyz;
+    }
+`;
 
 // Fragment shader
 const fragmentShaderSource = `
-#ifdef GL_FRAGMENT_PRECISION_HIGH
-   precision highp float;
-#else
-   precision mediump float;
-#endif
+    #ifdef GL_FRAGMENT_PRECISION_HIGH
+        precision highp float;
+    #else
+        precision mediump float;
+    #endif
 
-uniform vec4 color;
-void main() {
-    gl_FragColor = color;
-}`;
+    // Varyings from vertex shader already interpolated
+    varying vec3 v_TransformedNormal;
+    varying vec3 v_VertexWorldPosition;
+
+    // Uniforms for light position in eye-space
+    uniform vec3 u_LightPosition;
+
+    // Material properties
+    uniform vec3 u_ObjectColor;
+    uniform vec3 u_AmbientLightColor;
+    uniform vec3 u_DiffuseLightColor;
+    uniform vec3 u_SpecularLightColor;
+    uniform float u_Shininess;
+
+    void main() {
+        // Get lightning vectors
+        vec3 N = normalize(v_TransformedNormal);
+        vec3 L = normalize(u_LightPosition - v_VertexWorldPosition);
+
+        // Viewer at (0,0,1) from hint (blogspot)
+        vec3 V = vec3(0.0, 0.0, 1.0);
+
+        // Reflection vector
+        vec3 R = reflect(-L, N);
+
+        // Ambient
+        vec3 ambient = u_AmbientLightColor * u_ObjectColor;
+
+        // Diffuse
+        float diffIntensity = max(dot(N, L), 0.0);
+        vec3 diffuse = u_DiffuseLightColor * u_ObjectColor * diffIntensity;
+
+        // Specular
+        float specIntensity = pow(max(dot(R, V), 0.0), u_Shininess);
+        vec3 specular = u_SpecularLightColor * specIntensity;
+
+        // Final color
+        vec3 finalColor = ambient + diffuse + specular;
+
+        gl_FragColor = vec4(finalColor, 1.0);
+    }
+`;
