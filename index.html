@@ -4,7 +4,7 @@
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 
         <link rel="stylesheet" href="./style.css" />
-        <title>PA#1</title>
+        <title>PA#2</title>
     </head>
     <body onload="init()">
         <div class="wrapper">
@@ -34,19 +34,12 @@
                             <input type="number" id="b" name="b" value="1" step="0.1" min="0.1" />
                         </div>
                         <div class="parameter-group">
-                            <label for="zStep">z step:</label>
-                            <input type="number" id="zStep" name="zStep" value="0.1" step="0.1" min="0.1" />
+                            <label for="uSlider">U directions:</label>
+                            <input type="range" id="uSlider" name="uSlider" value="30" min="3" max="100" />
                         </div>
                         <div class="parameter-group">
-                            <label for="angleStep">angle step (degree):</label>
-                            <input
-                                type="number"
-                                id="angleStep"
-                                name="angleStep"
-                                value="15"
-                                step="1"
-                                min="1"
-                                max="360" />
+                            <label for="vSlider">V directions:</label>
+                            <input type="range" id="vSlider" name="vSlider" value="30" min="3" max="100" />
                         </div>
                     </div>
                     <div class="button">
@@ -60,5 +53,6 @@
         <script src="./Utils/m4.js"></script>
         <script src="./shader.gpu"></script>
         <script src="./main.js"></script>
+        <script src="./Model.js"></script>
     </body>
 </html>
