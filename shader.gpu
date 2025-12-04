@@ -2,24 +2,46 @@
 const vertexShaderSource = `
     attribute vec3 a_VertexPosition;
     attribute vec3 a_VertexNormal;
+    attribute vec3 a_VertexTangent;
+    attribute vec2 a_TexCoord;
 
     uniform mat4 u_ProjectionMatrix;
     uniform mat4 u_ModelViewMatrix;
     uniform mat4 u_NormalMatrix;
 
-    // Varyings to pass data to fragment shader
-    varying vec3 v_TransformedNormal;
-    varying vec3 v_VertexWorldPosition; //eye-space position
+    varying vec2 v_TexCoord;
+    varying vec3 v_LightPosTS; // light position in tangent space
+    varying vec3 v_ViewPosTS;  // view position in tangent space
+    varying vec3 v_FragPosTS;  // fragment position in tangent space
+
+    uniform vec3 u_LightPosition;
 
     void main() {
-        // Calc screen-space position
         gl_Position = u_ProjectionMatrix * u_ModelViewMatrix * vec4(a_VertexPosition, 1.0);
+        v_TexCoord = a_TexCoord;
 
-        // Transform normal and position to eye-space
-        v_TransformedNormal = (u_NormalMatrix * vec4(a_VertexNormal, 0.0)).xyz;
+        //Transform normal and tangent to eye space
+        vec3 T = normalize((u_NormalMatrix * vec4(a_VertexTangent, 0.0)).xyz);
+        vec3 N = normalize((u_NormalMatrix * vec4(a_VertexNormal, 0.0)).xyz);
 
-        // Pass eye-space position to fragment shader
-        v_VertexWorldPosition = (u_ModelViewMatrix * vec4(a_VertexPosition, 1.0)).xyz;
+        //Calculate Bitangent
+        //re-orthogonalize T with respect to N just in case interpolation broke it
+        T = normalize(T - dot(T, N) * N);
+        vec3 B = cross(N, T);
+
+        //Create TBN matrix
+        mat3 TBN_transposed = mat3(
+            T.x, B.x, N.x,
+            T.y, B.y, N.y,
+            T.z, B.z, N.z
+        );
+
+        //Transform positions to tangent space for lighting calculations
+        vec3 vertexEyePos = (u_ModelViewMatrix * vec4(a_VertexPosition, 1.0)).xyz;
+        
+        v_LightPosTS = TBN_transposed * u_LightPosition;
+        v_ViewPosTS  = TBN_transposed * vec3(0.0, 0.0, 0.0); // Eye is at 0,0,0 in eye space
+        v_FragPosTS  = TBN_transposed * vertexEyePos;
     }
 `;
 
@@ -31,45 +53,43 @@ const fragmentShaderSource = `
         precision mediump float;
     #endif
 
-    // Varyings from vertex shader already interpolated
-    varying vec3 v_TransformedNormal;
-    varying vec3 v_VertexWorldPosition;
+    varying vec2 v_TexCoord;
+    varying vec3 v_LightPosTS;
+    varying vec3 v_ViewPosTS;
+    varying vec3 v_FragPosTS;
 
-    // Uniforms for light position in eye-space
-    uniform vec3 u_LightPosition;
-
-    // Material properties
-    uniform vec3 u_ObjectColor;
+    //Light Properties
     uniform vec3 u_AmbientLightColor;
     uniform vec3 u_DiffuseLightColor;
     uniform vec3 u_SpecularLightColor;
     uniform float u_Shininess;
 
     void main() {
-        // Get lightning vectors
-        vec3 N = normalize(v_TransformedNormal);
-        vec3 L = normalize(u_LightPosition - v_VertexWorldPosition);
+        //Unpack normal from normal map
+        vec3 normalMap = texture2D(u_TextureNormal, v_TexCoord).rgb;
+        vec3 N = normalize(normalMap * 2.0 - 1.0);
 
-        // Viewer at (0,0,1) from hint (blogspot)
-        vec3 V = vec3(0.0, 0.0, 1.0);
-
-        // Reflection vector
+        //Calculate light vectors in tangent space
+        vec3 L = normalize(v_LightPosTS - v_FragPosTS);
+        vec3 V = normalize(v_ViewPosTS - v_FragPosTS);
         vec3 R = reflect(-L, N);
 
-        // Ambient
-        vec3 ambient = u_AmbientLightColor * u_ObjectColor;
+        //Sample material colors
+        vec3 texDiffuse = texture2D(u_TextureDiffuse, v_TexCoord).rgb;
+        float texSpecular = texture2D(u_TextureSpecular, v_TexCoord).r;
 
-        // Diffuse
+        //Phong lighting
+        //Ambient
+        vec3 ambient = u_AmbientLightColor * texDiffuse;
+
+        //Diffuse
         float diffIntensity = max(dot(N, L), 0.0);
-        vec3 diffuse = u_DiffuseLightColor * u_ObjectColor * diffIntensity;
+        vec3 diffuse = u_DiffuseLightColor * texDiffuse * diffIntensity;
 
-        // Specular
+        //Specular
         float specIntensity = pow(max(dot(R, V), 0.0), u_Shininess);
-        vec3 specular = u_SpecularLightColor * specIntensity;
+        vec3 specular = u_SpecularLightColor * texSpecular * specIntensity; 
 
-        // Final color
-        vec3 finalColor = ambient + diffuse + specular;
-
-        gl_FragColor = vec4(finalColor, 1.0);
+        gl_FragColor = vec4(ambient + diffuse + specular, 1.0);
     }
 `;
