@@ -2,7 +2,7 @@
 
 // p: an array of xyz vertex coords
 // t: an array of uv tex coords
-function Vertex(p) {
+function Vertex(p, uv) {
     this.p = p;
     this.uv = uv;
     this.normal = [0, 0, 0];
@@ -53,6 +53,14 @@ function Model(name) {
 
     // Draw the model
     this.Draw = function () {
+        //Activate textures
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, this.idTextureDiffuse);
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_2D, this.idTextureSpecular);
+        gl.activeTexture(gl.TEXTURE2);
+        gl.bindTexture(gl.TEXTURE_2D, this.idTextureNormal);
+
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
         gl.vertexAttribPointer(shProgram.iAttribVertex, 3, gl.FLOAT, false, 0, 0);
         gl.enableVertexAttribArray(shProgram.iAttribVertex);
@@ -198,7 +206,6 @@ function CreateSurfaceData(data) {
     }
 
     // Fill index array
-    data.indicesU16 = new Uint16Array(triangles.length * 3);
     for (let i = 0; i < triangles.length; i++) {
         data.indicesU16[i * 3 + 0] = triangles[i].v0;
         data.indicesU16[i * 3 + 1] = triangles[i].v1;

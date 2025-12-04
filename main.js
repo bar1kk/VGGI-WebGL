@@ -12,13 +12,20 @@ let a_input, b_input, u_slider, v_slider;
 function ShaderProgram(name, program) {
     this.name = name;
     this.prog = program;
-
-    // Location of the attribute variable in the shader program.
+    //Atributes
     this.iAttribVertex = -1;
-    // Location of the uniform specifying a color for the primitive.
-    this.iColor = -1;
-    // Location of the uniform matrix representing the combined transformation.
-    this.iModelViewProjectionMatrix = -1;
+    this.iAttribNormal = -1;
+    this.iAttribTangent = -1;
+    this.iAttribTexCoord = -1;
+    //Uniforms
+    this.iProjectionMatrix = -1;
+    this.iModelViewMatrix = -1;
+    this.iNormalMatrix = -1;
+    this.iLightPosition = -1;
+    // Material properties
+    this.iTexDiffuse = -1;
+    this.iTexSpecular = -1;
+    this.iTexNormal = -1;
 
     this.Use = function () {
         gl.useProgram(this.prog);
@@ -73,9 +80,13 @@ function draw() {
     gl.uniformMatrix4fv(shProgram.iModelViewMatrix, false, matAccum1);
     gl.uniformMatrix4fv(shProgram.iNormalMatrix, false, normalMatrix);
     gl.uniform3fv(shProgram.iLightPosition, lightEyePos);
-    gl.uniform3f(shProgram.iObjectColor, 0.8, 0.5, 0.2);
-    gl.uniform3f(shProgram.iAmbientLightColor, 0.2, 0.2, 0.2);
-    gl.uniform3f(shProgram.iDiffuseLightColor, 0.8, 0.8, 0.8);
+    //Bind texture units to samplers
+    gl.uniform1i(shProgram.iTexDiffuse, 0);
+    gl.uniform1i(shProgram.iTexSpecular, 1);
+    gl.uniform1i(shProgram.iTexNormal, 2);
+
+    gl.uniform3f(shProgram.iAmbientLightColor, 0.2, 0.2, 0.2); 
+    gl.uniform3f(shProgram.iDiffuseLightColor, 0.8, 0.8, 0.8); 
     gl.uniform3f(shProgram.iSpecularLightColor, 1.0, 1.0, 1.0);
     gl.uniform1f(shProgram.iShininess, 32.0);
 
@@ -86,23 +97,34 @@ function draw() {
 function initGL() {
     let prog = createProgram(gl, vertexShaderSource, fragmentShaderSource);
 
-    shProgram = new ShaderProgram('PhongShader', prog);
+    shProgram = new ShaderProgram('NormalMapShader', prog);
     shProgram.Use();
 
     // Get the location of the attribute and uniform variables
     shProgram.iAttribVertex = gl.getAttribLocation(prog, 'a_VertexPosition');
     shProgram.iAttribNormal = gl.getAttribLocation(prog, 'a_VertexNormal');
+    shProgram.iAttribTangent = gl.getAttribLocation(prog, 'a_VertexTangent');
+    shProgram.iAttribTexCoord = gl.getAttribLocation(prog, 'a_TexCoord');
+
     shProgram.iProjectionMatrix = gl.getUniformLocation(prog, 'u_ProjectionMatrix');
     shProgram.iModelViewMatrix = gl.getUniformLocation(prog, 'u_ModelViewMatrix');
     shProgram.iNormalMatrix = gl.getUniformLocation(prog, 'u_NormalMatrix');
     shProgram.iLightPosition = gl.getUniformLocation(prog, 'u_LightPosition');
-    shProgram.iObjectColor = gl.getUniformLocation(prog, 'u_ObjectColor');
+
+    shProgram.iTexDiffuse = gl.getUniformLocation(prog, 'u_TextureDiffuse');
+    shProgram.iTexSpecular = gl.getUniformLocation(prog, 'u_TextureSpecular');
+    shProgram.iTexNormal = gl.getUniformLocation(prog, 'u_TextureNormal');
+
     shProgram.iAmbientLightColor = gl.getUniformLocation(prog, 'u_AmbientLightColor');
     shProgram.iDiffuseLightColor = gl.getUniformLocation(prog, 'u_DiffuseLightColor');
     shProgram.iSpecularLightColor = gl.getUniformLocation(prog, 'u_SpecularLightColor');
     shProgram.iShininess = gl.getUniformLocation(prog, 'u_Shininess');
 
     surface = new Model('Surface');
+
+    surface.idTextureDiffuse = LoadTexture('https://webglfundamentals.org/webgl/resources/f-texture.png');
+    surface.idTextureSpecular = LoadTexture('https://webglfundamentals.org/webgl/resources/keyboard.jpg');
+    surface.idTextureNormal = LoadTexture('./normal_map.png');
 
     gl.enable(gl.DEPTH_TEST);
     gl.clearColor(0.2, 0.2, 0.2, 1);

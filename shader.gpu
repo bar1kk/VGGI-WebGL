@@ -58,6 +58,10 @@ const fragmentShaderSource = `
     varying vec3 v_ViewPosTS;
     varying vec3 v_FragPosTS;
 
+    uniform sampler2D u_TextureDiffuse;
+    uniform sampler2D u_TextureSpecular;
+    uniform sampler2D u_TextureNormal;
+
     //Light Properties
     uniform vec3 u_AmbientLightColor;
     uniform vec3 u_DiffuseLightColor;
