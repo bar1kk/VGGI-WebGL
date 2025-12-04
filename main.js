@@ -29,8 +29,7 @@ function redraw() {
     let data = {};
 
     CreateSurfaceData(data);
-    surface.BufferData(data.verticesF32, data.normalsF32, data.indicesU16);
-
+    surface.BufferData(data.verticesF32, data.normalsF32, data.tangentsF32, data.texCoordsF32, data.indicesU16);
     draw();
 }
 
@@ -63,7 +62,7 @@ function draw() {
     let normalMatrix = m4.inverse(matAccum1);
     m4.transpose(normalMatrix, normalMatrix);
 
-    // Light position in eye-space 
+    // Light position in eye-space
     const lightWorldPos = [5.0, 3.0, 5.0];
     let lightEyePos = m4.transformPoint(modelView, lightWorldPos);
 
@@ -74,11 +73,11 @@ function draw() {
     gl.uniformMatrix4fv(shProgram.iModelViewMatrix, false, matAccum1);
     gl.uniformMatrix4fv(shProgram.iNormalMatrix, false, normalMatrix);
     gl.uniform3fv(shProgram.iLightPosition, lightEyePos);
-    gl.uniform3f(shProgram.iObjectColor, 0.8, 0.5, 0.2);       
-    gl.uniform3f(shProgram.iAmbientLightColor, 0.2, 0.2, 0.2); 
-    gl.uniform3f(shProgram.iDiffuseLightColor, 0.8, 0.8, 0.8); 
+    gl.uniform3f(shProgram.iObjectColor, 0.8, 0.5, 0.2);
+    gl.uniform3f(shProgram.iAmbientLightColor, 0.2, 0.2, 0.2);
+    gl.uniform3f(shProgram.iDiffuseLightColor, 0.8, 0.8, 0.8);
     gl.uniform3f(shProgram.iSpecularLightColor, 1.0, 1.0, 1.0);
-    gl.uniform1f(shProgram.iShininess, 32.0);   
+    gl.uniform1f(shProgram.iShininess, 32.0);
 
     surface.Draw();
 }

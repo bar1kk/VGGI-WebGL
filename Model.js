@@ -88,6 +88,13 @@ function CreateSurfaceData(data)
     const Y = (rZ, angle) => rZ * Math.cos(angle);
     const RZ = (z, a, b) => (z * Math.sqrt(z * (a - z))) / b;
 
+    const TangentAnalytic = (rZ, angle) => {
+        let tx = rZ * Math.cos(angle);
+        let ty = -rZ * Math.sin(angle);
+        let tz = 0;
+        return [tx, ty, tz];
+    };
+
     // Parameters from the UI
     let a = parseFloat(document.getElementById('a').value);
     let b = parseFloat(document.getElementById('b').value);
@@ -110,7 +117,16 @@ function CreateSurfaceData(data)
             let x = X(rZ, v);
             let y = Y(rZ, v);
             let z = u;
-            vertices.push( new Vertex([x, y, z]) );
+
+            let u_tex = 1.0 - (j / vDivs);
+            let v_tex = i / uDivs;
+
+            let vert = new Vertex([x, y, z], [u_tex, v_tex]);
+
+            let t = TangentAnalytic(rZ, v);
+            vert.tangent = t;
+            
+            vertices.push(vert);
         }
     }
 
@@ -150,20 +166,31 @@ function CreateSurfaceData(data)
     // Prepare data arrays
     data.verticesF32 = new Float32Array(vertices.length*3);
     data.normalsF32 = new Float32Array(vertices.length*3);
-
+    data.tangentsF32 = new Float32Array(vertices.length * 3);
+    data.texCoordsF32 = new Float32Array(vertices.length * 2);
+    data.indicesU16 = new Uint16Array(triangles.length * 3);
+    
     // Fill vertex and normal arrays
     for (let i=0; i<vertices.length; i++)
     {
-        data.verticesF32[i*3 + 0] = vertices[i].p[0];
-        data.verticesF32[i*3 + 1] = vertices[i].p[1];
-        data.verticesF32[i*3 + 2] = vertices[i].p[2];
+        let v = vertices[i];
+        data.verticesF32[i*3+0] = v.p[0];
+        data.verticesF32[i*3+1] = v.p[1];
+        data.verticesF32[i*3+2] = v.p[2];
 
         // Normalize the normal vector
-        let n = m4.normalize(vertices[i].normal);
+        let n = m4.normalize(v.normal);
 
         data.normalsF32[i*3 + 0] = n[0];
         data.normalsF32[i*3 + 1] = n[1];
         data.normalsF32[i*3 + 2] = n[2];
+
+        data.tangentsF32[i*3+0] = v.tangent[0];
+        data.tangentsF32[i*3+1] = v.tangent[1];
+        data.tangentsF32[i*3+2] = v.tangent[2];
+
+        data.texCoordsF32[i*2+0] = v.uv[0];
+        data.texCoordsF32[i*2+1] = v.uv[1];
     }
 
     // Fill index array
