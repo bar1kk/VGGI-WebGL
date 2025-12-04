@@ -2,16 +2,14 @@
 
 // p: an array of xyz vertex coords
 // t: an array of uv tex coords
-function Vertex(p)
-{
+function Vertex(p) {
     this.p = p;
-    this.uv = uv
+    this.uv = uv;
     this.normal = [0, 0, 0];
     this.tangent = [0, 0, 0];
 }
 
-function Triangle(v0, v1, v2)
-{
+function Triangle(v0, v1, v2) {
     this.v0 = v0;
     this.v1 = v1;
     this.v2 = v2;
@@ -24,7 +22,7 @@ function Model(name) {
     this.name = name;
     this.iVertexBuffer = gl.createBuffer();
     this.iNormalBuffer = gl.createBuffer();
-    this.iTangentBuffer = gl.createBuffer(); 
+    this.iTangentBuffer = gl.createBuffer();
     this.iTexCoordBuffer = gl.createBuffer();
     this.iIndexBuffer = gl.createBuffer();
     this.count = 0;
@@ -34,14 +32,13 @@ function Model(name) {
     this.idTextureNormal = -1;
 
     // Buffer the data into the GPU
-    this.BufferData = function(vertices, normals, tangents, texCoords, indices) {
-
+    this.BufferData = function (vertices, normals, tangents, texCoords, indices) {
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iNormalBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, normals, gl.STATIC_DRAW);
-        
+
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iTangentBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, tangents, gl.STATIC_DRAW);
 
@@ -52,11 +49,10 @@ function Model(name) {
         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
 
         this.count = indices.length;
-    }
+    };
 
     // Draw the model
-    this.Draw = function() {
-
+    this.Draw = function () {
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
         gl.vertexAttribPointer(shProgram.iAttribVertex, 3, gl.FLOAT, false, 0, 0);
         gl.enableVertexAttribArray(shProgram.iAttribVertex);
@@ -77,12 +73,10 @@ function Model(name) {
 
         //gl.drawArrays(gl.LINE_STRIP, 0, this.count);
         gl.drawElements(gl.TRIANGLES, this.count, gl.UNSIGNED_SHORT, 0);
-    }
+    };
 }
 
-
-function CreateSurfaceData(data)
-{
+function CreateSurfaceData(data) {
     // Parametric equations
     const X = (rZ, angle) => rZ * Math.sin(angle);
     const Y = (rZ, angle) => rZ * Math.cos(angle);
@@ -113,19 +107,19 @@ function CreateSurfaceData(data)
         let rZ = RZ(u, a, b);
         for (let j = 0; j <= vDivs; j++) {
             let v = j * vStep;
-            
+
             let x = X(rZ, v);
             let y = Y(rZ, v);
             let z = u;
 
-            let u_tex = 1.0 - (j / vDivs);
+            let u_tex = 1.0 - j / vDivs;
             let v_tex = i / uDivs;
 
             let vert = new Vertex([x, y, z], [u_tex, v_tex]);
 
             let t = TangentAnalytic(rZ, v);
             vert.tangent = t;
-            
+
             vertices.push(vert);
         }
     }
@@ -138,8 +132,8 @@ function CreateSurfaceData(data)
             let v2 = (i + 1) * (vDivs + 1) + j;
             let v3 = v2 + 1;
 
-            triangles.push( new Triangle(v0, v2, v1) );
-            triangles.push( new Triangle(v1, v2, v3) );
+            triangles.push(new Triangle(v0, v2, v1));
+            triangles.push(new Triangle(v1, v2, v3));
         }
     }
 
@@ -163,42 +157,51 @@ function CreateSurfaceData(data)
         m4.addVectors(v2.normal, facetNormal, v2.normal);
     }
 
+    for (let i = 0; i < vertices.length; i++) {
+        let v = vertices[i];
+
+        let T = m4.normalize(v.tangent);
+        let N_raw = v.normal;
+
+        let dotNT = m4.dot(N_raw, T);
+        let projection = m4.scaleVector(T, dotNT);
+        let N_ortho = m4.subtractVectors(N_raw, projection);
+
+        v.normal = m4.normalize(N_ortho);
+        v.tangent = T;
+    }
+
     // Prepare data arrays
-    data.verticesF32 = new Float32Array(vertices.length*3);
-    data.normalsF32 = new Float32Array(vertices.length*3);
+    data.verticesF32 = new Float32Array(vertices.length * 3);
+    data.normalsF32 = new Float32Array(vertices.length * 3);
     data.tangentsF32 = new Float32Array(vertices.length * 3);
     data.texCoordsF32 = new Float32Array(vertices.length * 2);
     data.indicesU16 = new Uint16Array(triangles.length * 3);
-    
+
     // Fill vertex and normal arrays
-    for (let i=0; i<vertices.length; i++)
-    {
+    for (let i = 0; i < vertices.length; i++) {
         let v = vertices[i];
-        data.verticesF32[i*3+0] = v.p[0];
-        data.verticesF32[i*3+1] = v.p[1];
-        data.verticesF32[i*3+2] = v.p[2];
+        data.verticesF32[i * 3 + 0] = v.p[0];
+        data.verticesF32[i * 3 + 1] = v.p[1];
+        data.verticesF32[i * 3 + 2] = v.p[2];
 
-        // Normalize the normal vector
-        let n = m4.normalize(v.normal);
+        data.normalsF32[i * 3 + 0] = v.normal[0];
+        data.normalsF32[i * 3 + 1] = v.normal[1];
+        data.normalsF32[i * 3 + 2] = v.normal[2];
 
-        data.normalsF32[i*3 + 0] = n[0];
-        data.normalsF32[i*3 + 1] = n[1];
-        data.normalsF32[i*3 + 2] = n[2];
+        data.tangentsF32[i * 3 + 0] = v.tangent[0];
+        data.tangentsF32[i * 3 + 1] = v.tangent[1];
+        data.tangentsF32[i * 3 + 2] = v.tangent[2];
 
-        data.tangentsF32[i*3+0] = v.tangent[0];
-        data.tangentsF32[i*3+1] = v.tangent[1];
-        data.tangentsF32[i*3+2] = v.tangent[2];
-
-        data.texCoordsF32[i*2+0] = v.uv[0];
-        data.texCoordsF32[i*2+1] = v.uv[1];
+        data.texCoordsF32[i * 2 + 0] = v.uv[0];
+        data.texCoordsF32[i * 2 + 1] = v.uv[1];
     }
 
     // Fill index array
-    data.indicesU16 = new Uint16Array(triangles.length*3);
-    for (let i=0; i<triangles.length; i++)
-    {
-        data.indicesU16[i*3 + 0] = triangles[i].v0;
-        data.indicesU16[i*3 + 1] = triangles[i].v1;
-        data.indicesU16[i*3 + 2] = triangles[i].v2;
+    data.indicesU16 = new Uint16Array(triangles.length * 3);
+    for (let i = 0; i < triangles.length; i++) {
+        data.indicesU16[i * 3 + 0] = triangles[i].v0;
+        data.indicesU16[i * 3 + 1] = triangles[i].v1;
+        data.indicesU16[i * 3 + 2] = triangles[i].v2;
     }
 }
