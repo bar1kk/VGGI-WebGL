@@ -62,9 +62,10 @@ function draw() {
 
     /* Get the view matrix from the SimpleRotator object.*/
     let modelView = spaceball.getViewMatrix();
-
-    let translateToPointZero = m4.translation(0, 0, -10);
-    let matAccum1 = m4.multiply(translateToPointZero, modelView);
+    let scaleMatrix = m4.scaling(1.25, 1.25, 1.25);
+    let modelViewScaled = m4.multiply(modelView, scaleMatrix);
+    let translateToPointZero = m4.translation(0, 1, -10);
+    let matAccum1 = m4.multiply(translateToPointZero, modelViewScaled);
 
     let normalMatrix = m4.inverse(matAccum1);
     m4.transpose(normalMatrix, normalMatrix);
@@ -88,7 +89,7 @@ function draw() {
     gl.uniform3f(shProgram.iAmbientLightColor, 0.2, 0.2, 0.2); 
     gl.uniform3f(shProgram.iDiffuseLightColor, 0.8, 0.8, 0.8); 
     gl.uniform3f(shProgram.iSpecularLightColor, 1.0, 1.0, 1.0);
-    gl.uniform1f(shProgram.iShininess, 32.0);
+    gl.uniform1f(shProgram.iShininess, 10.0);
 
     surface.Draw();
 }
@@ -122,9 +123,9 @@ function initGL() {
 
     surface = new Model('Surface');
 
-    surface.idTextureDiffuse = LoadTexture('https://webglfundamentals.org/webgl/resources/f-texture.png');
-    surface.idTextureSpecular = LoadTexture('https://webglfundamentals.org/webgl/resources/keyboard.jpg');
-    surface.idTextureNormal = LoadTexture('./normal_map.png');
+    surface.idTextureDiffuse = LoadTexture('./textures/diffuse.png');
+    surface.idTextureSpecular = LoadTexture('./textures/specular.png');
+    surface.idTextureNormal = LoadTexture('./textures/normal.png');
 
     gl.enable(gl.DEPTH_TEST);
     gl.clearColor(0.2, 0.2, 0.2, 1);

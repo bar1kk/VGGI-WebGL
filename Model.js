@@ -126,6 +126,9 @@ function CreateSurfaceData(data) {
             let vert = new Vertex([x, y, z], [u_tex, v_tex]);
 
             let t = TangentAnalytic(rZ, v);
+            if (Math.abs(t[0]) < 0.0001 && Math.abs(t[1]) < 0.0001 && Math.abs(t[2]) < 0.0001) {
+                t = [1, 0, 0];
+            }
             vert.tangent = t;
 
             vertices.push(vert);
