@@ -25,8 +25,8 @@ const vertexShaderSource = `
         vec3 N = normalize((u_NormalMatrix * vec4(a_VertexNormal, 0.0)).xyz);
 
         //Calculate Bitangent
-        //re-orthogonalize T with respect to N just in case interpolation broke it
-        T = normalize(T - dot(T, N) * N);
+        //re-orthogonalize N with respect to T
+        N = normalize(N - dot(N, T) * T);
         vec3 B = cross(N, T);
 
         //Create TBN matrix
