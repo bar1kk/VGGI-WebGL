@@ -215,3 +215,52 @@ function CreateSurfaceData(data) {
         data.indicesU16[i * 3 + 2] = triangles[i].v2;
     }
 }
+
+function CreateSphere(model, radius) {
+    let vertices = [];
+    let normals = [];
+    let tangents = [];
+    let texCoords = [];
+    let indices = [];
+
+    let latBands = 16;
+    let longBands = 16;
+
+    for (let latNumber = 0; latNumber <= latBands; latNumber++) {
+        let theta = latNumber * Math.PI / latBands;
+        let sinTheta = Math.sin(theta);
+        let cosTheta = Math.cos(theta);
+
+        for (let longNumber = 0; longNumber <= longBands; longNumber++) {
+            let phi = longNumber * 2 * Math.PI / longBands;
+            let sinPhi = Math.sin(phi);
+            let cosPhi = Math.cos(phi);
+
+            let x = cosPhi * sinTheta;
+            let y = cosTheta;
+            let z = sinPhi * sinTheta;
+            
+            normals.push(x, y, z);
+            vertices.push(radius * x, radius * y, radius * z);
+            tangents.push(-sinPhi, 0, cosPhi); 
+            texCoords.push(longNumber / longBands, latNumber / latBands);
+        }
+    }
+
+    for (let latNumber = 0; latNumber < latBands; latNumber++) {
+        for (let longNumber = 0; longNumber < longBands; longNumber++) {
+            let first = (latNumber * (longBands + 1)) + longNumber;
+            let second = first + longBands + 1;
+            indices.push(first, second, first + 1);
+            indices.push(second, second + 1, first + 1);
+        }
+    }
+
+    model.BufferData(
+        new Float32Array(vertices),
+        new Float32Array(normals),
+        new Float32Array(tangents),
+        new Float32Array(texCoords),
+        new Uint16Array(indices)
+    );
+}
