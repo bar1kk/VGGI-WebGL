@@ -2,11 +2,15 @@
 
 let gl; // The webgl context.
 let surface; // A surface model
+let marker;
 let shProgram; // A shader program
 let spaceball; // A SimpleRotator object that lets the user rotate the view by mouse.
 
 // Links to the HTML elements
-let a_input, b_input, u_slider, v_slider;
+let a_input, b_input, u_slider, v_slider, tex_scale_slider, tex_scale_val;
+
+let textureCenter = [0.5, 0.5]; 
+let textureScale = 1.0;
 
 // Constructor
 function ShaderProgram(name, program) {
@@ -27,6 +31,10 @@ function ShaderProgram(name, program) {
     this.iTexSpecular = -1;
     this.iTexNormal = -1;
 
+    // New uniforms for scaling
+    this.iTexScale = -1;
+    this.iTexCenter = -1;
+
     this.Use = function () {
         gl.useProgram(this.prog);
     };
@@ -46,6 +54,10 @@ function resetParameters() {
     u_slider.value = 30;
     v_slider.value = 30;
 
+    tex_scale_slider.value = 1.0;
+    document.getElementById('texScaleValue').innerText = "1.0";
+    textureScale = 1.0;
+    textureCenter = [0.5, 0.5];
     redraw();
 }
 
@@ -91,7 +103,46 @@ function draw() {
     gl.uniform3f(shProgram.iSpecularLightColor, 1.0, 1.0, 1.0);
     gl.uniform1f(shProgram.iShininess, 10.0);
 
+    // Pass scaling parameters
+    gl.uniform1f(shProgram.iTexScale, textureScale);
+    gl.uniform2fv(shProgram.iTexCenter, textureCenter);
+
     surface.Draw();
+
+    // Draw marker
+    let a = parseFloat(a_input.value);
+    let b = parseFloat(b_input.value);
+
+    // Map texture coordinates back to 3D surface point
+    let u_tex = textureCenter[0]; 
+    let v_tex = textureCenter[1];
+
+    // Calculate Z based on V texture coordinate
+    let z_point = v_tex * a; 
+    
+    // Calculate Radius RZ
+    const RZ = (z, a, b) => (z * Math.sqrt(z * (a - z))) / b;
+    let r_point = (z_point >= a) ? 0 : RZ(z_point, a, b);
+
+    // Calculate Angle based on U texture coordinate
+    let angle_point = (1.0 - u_tex) * 2 * Math.PI;
+
+    // Calculate X and Y
+    let x_point = r_point * Math.sin(angle_point);
+    let y_point = r_point * Math.cos(angle_point);
+
+    // Move marker to this position
+    let translateMarker = m4.translation(x_point, y_point, z_point);
+    let markerMatrix = m4.multiply(matAccum1, translateMarker);
+
+    gl.uniformMatrix4fv(shProgram.iModelViewMatrix, false, markerMatrix);
+    
+    // Make marker bright red (high ambient, no diffuse/specular)
+    gl.uniform3f(shProgram.iAmbientLightColor, 1.0, 0.0, 0.0); 
+    gl.uniform3f(shProgram.iDiffuseLightColor, 0.0, 0.0, 0.0);
+    gl.uniform3f(shProgram.iSpecularLightColor, 0.0, 0.0, 0.0);
+
+    marker.Draw();
 }
 
 /* Initialize the WebGL context. Called from init() */
@@ -121,11 +172,23 @@ function initGL() {
     shProgram.iSpecularLightColor = gl.getUniformLocation(prog, 'u_SpecularLightColor');
     shProgram.iShininess = gl.getUniformLocation(prog, 'u_Shininess');
 
+    // Get locations for new uniforms
+    shProgram.iTexScale = gl.getUniformLocation(prog, 'u_TexScale');
+    shProgram.iTexCenter = gl.getUniformLocation(prog, 'u_TexCenter');
+
     surface = new Model('Surface');
 
     surface.idTextureDiffuse = LoadTexture('./textures/diffuse.png');
     surface.idTextureSpecular = LoadTexture('./textures/specular.png');
     surface.idTextureNormal = LoadTexture('./textures/normal.png');
+
+    // Create marker
+    marker = new Model('Marker');
+    CreateSphere(marker, 0.05);
+    // Reuse textures (shader expects them bound)
+    marker.idTextureDiffuse = surface.idTextureDiffuse; 
+    marker.idTextureSpecular = surface.idTextureSpecular;
+    marker.idTextureNormal = surface.idTextureNormal;
 
     gl.enable(gl.DEPTH_TEST);
     gl.clearColor(0.2, 0.2, 0.2, 1);
@@ -170,6 +233,8 @@ function init() {
     b_input = document.getElementById('b');
     u_slider = document.getElementById('uSlider');
     v_slider = document.getElementById('vSlider');
+    tex_scale_slider = document.getElementById('texScale');
+    tex_scale_val = document.getElementById('texScaleValue');
 
     let canvas;
     try {
@@ -193,8 +258,40 @@ function init() {
     spaceball = new TrackballRotator(canvas, draw, 0);
 
     // Event listeners for the sliders and inputs
-    [a_input, b_input, u_slider, v_slider].forEach((el) => {
-        el.addEventListener('input', redraw);
+    [a_input, b_input, u_slider, v_slider, tex_scale_slider].forEach((el) => {
+        el.addEventListener('input', () => {
+             if(el === tex_scale_slider) {
+                 textureScale = parseFloat(el.value);
+                 tex_scale_val.innerText = textureScale; 
+             }
+             redraw();
+        });
+    });
+
+    // Keyboard handler fow WASD
+    window.addEventListener('keydown', (e) => {
+        const step = 0.02;
+        switch (e.code) {
+            case 'KeyA': 
+                textureCenter[0] += step;
+                break;
+            case 'KeyD': 
+                textureCenter[0] -= step;
+                break;
+            case 'KeyW': 
+                textureCenter[1] -= step;
+                break;
+            case 'KeyS': 
+                textureCenter[1] += step;
+                break;
+            default:
+                return;
+        }
+
+        textureCenter[0] = Math.max(0.0, Math.min(1.0, textureCenter[0]));
+        textureCenter[1] = Math.max(0.0, Math.min(1.0, textureCenter[1]));
+        
+        draw();
     });
 
     redraw();
