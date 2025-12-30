@@ -9,6 +9,9 @@ const vertexShaderSource = `
     uniform mat4 u_ModelViewMatrix;
     uniform mat4 u_NormalMatrix;
 
+    uniform float u_TexScale;   
+    uniform vec2 u_TexCenter; 
+
     varying vec2 v_TexCoord;
     varying vec3 v_LightPosTS; // light position in tangent space
     varying vec3 v_ViewPosTS;  // view position in tangent space
@@ -19,6 +22,10 @@ const vertexShaderSource = `
     void main() {
         gl_Position = u_ProjectionMatrix * u_ModelViewMatrix * vec4(a_VertexPosition, 1.0);
         v_TexCoord = a_TexCoord;
+
+        vec2 centered = a_TexCoord - u_TexCenter;
+        vec2 scaled = centered * u_TexScale;
+        v_TexCoord = scaled + u_TexCenter;
 
         //Transform normal and tangent to eye space
         vec3 T = normalize((u_NormalMatrix * vec4(a_VertexTangent, 0.0)).xyz);
